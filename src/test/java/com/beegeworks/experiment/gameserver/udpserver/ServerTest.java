@@ -22,8 +22,6 @@ public class ServerTest {
 
         String result = Client.sendAndReceiveString("hello world");
 
-        server.stopServer();
-
         System.out.println("Result: '" + result + "'");
         assertEquals("HELLO WORLD", result.trim());
     }
@@ -31,6 +29,9 @@ public class ServerTest {
     @After
     public void tearDown() throws Exception {
         while (server.getStatus() == ServerStatus.LISTENING)
+            // STOP UNTIL YOU STOP
             server.stopServer();
+        // There's probably a better way to do this... but eh, lazy.
+        // This doesn't hurt anything.
     }
 }
