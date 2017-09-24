@@ -8,10 +8,24 @@ sourceCompatibility = 1.8
 
 repositories {
     mavenCentral()
+    jcenter()
 }
 
 dependencies {
     compileOnly group: 'org.projectlombok', name: 'lombok', version: '1.16.18'
     testCompile group: 'junit', name: 'junit', version: '4.12'
     compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.3'
+}
+
+// thanks to https://www.mkyong.com/gradle/gradle-create-a-jar-file-with-dependencies/
+//create a single Jar with all dependencies
+task fatJar(type: Jar) {
+    manifest {
+        attributes 'Implementation-Title': 'UDP Game Server',
+                'Implementation-Version': version,
+                'Main-Class': 'com.beegeworks.experiment.gameserver.udpserver.Main'
+    }
+    baseName = project.name + '-all'
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
 }
