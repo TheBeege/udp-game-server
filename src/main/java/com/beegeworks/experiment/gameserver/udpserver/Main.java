@@ -2,7 +2,7 @@ package com.beegeworks.experiment.gameserver.udpserver;
 
 public class Main {
     public static void main(String[] args) throws Exception {
-        Server server = new Server(9876);
+        Server server = new Server(9876, 100);
         /*
             A shutdown hook is an object that can react to a process shutdown,
             like a keyboard interrupt. This is how we have a "graceful" shutdown,

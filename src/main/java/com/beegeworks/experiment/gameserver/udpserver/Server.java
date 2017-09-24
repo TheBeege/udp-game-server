@@ -8,15 +8,18 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.util.List;
 
 // based on https://systembash.com/a-simple-java-udp-server-and-udp-client/
+// enhancements guided by https://gafferongames.com/post/client_server_connection/
 @Slf4j
 public class Server extends Thread {
+
     private boolean shouldContinue = true;
 
     private final int port;
-    // This part is what could be considered the core "server"
-    private DatagramSocket serverSocket;
+
+    private final int maxConnectionSlots;
     /*
     What's a datagram and a socket?
     Put simply, a datagram is a packet of data. A socket is an
@@ -46,9 +49,16 @@ public class Server extends Thread {
 
     @Getter
     private ServerStatus status = ServerStatus.NOT_STARTED;
+    // This part is what could be considered the core "server"
+    @Getter
+    private DatagramSocket serverSocket;
+    private int countAvailableSlots;
+    private List<GameConnection> connections;
 
-    Server(int port) {
+    Server(int port, int maxConnectionSlots) {
         this.port = port;
+        this.maxConnectionSlots = maxConnectionSlots;
+        this.countAvailableSlots = maxConnectionSlots;
     }
 
     /*
@@ -103,19 +113,7 @@ public class Server extends Thread {
             InetAddress IPAddress = receivePacket.getAddress();
             // Get the port the client opened up the connection through
             int port = receivePacket.getPort();
-            // WE LIKE CAPS. WE'RE AN OLD SERVER AND DON'T KNOW WHAT THIS INTERWEBZ THING IS.
-            String capitalizedSentence = sentence.toUpperCase();
-            // Sockets work in bytes. Make Strings into bytes or die trying.
-            sendData = capitalizedSentence.getBytes();
-            // Package all of our home-grown, organic data to send to our lovely clients.
-            DatagramPacket sendPacket =
-                    new DatagramPacket(sendData, sendData.length, IPAddress, port);
-            try {
-                // If you don't know what this does... We should practice English ;)
-                serverSocket.send(sendPacket);
-            } catch (IOException e) {
-                log.error("Failed to send packet", e);
-            }
+
         }
         // Loop's done! Close up the socket and call it a day.
         serverSocket.close();
@@ -124,6 +122,7 @@ public class Server extends Thread {
     }
 
     void stopServer() {
+        connections.forEach(GameConnection::closeConnection);
         /*
          We close the socket when we stop so that trying to receive packets
          doesn't block. Otherwise, we'd need to wait for a client to send us
@@ -131,5 +130,31 @@ public class Server extends Thread {
           */
         serverSocket.close();
         shouldContinue = false;
+    }
+
+    private boolean checkIfAlreadyConnected(GameConnection connection) {
+        return connections.stream()
+                .filter(c -> c.toString().equals(connection.toString()))
+                .count() > 0;
+    }
+
+    private void useSlot(GameConnection connection) {
+        if (checkIfAlreadyConnected(connection)) {
+            connection.accept();
+            return;
+        }
+
+        if (countAvailableSlots >= maxConnectionSlots) {
+            connection.deny();
+            return;
+        }
+        connection.accept();
+        connections.add(connection);
+        countAvailableSlots--;
+    }
+
+    synchronized void freeSlot(GameConnection connection) {
+        connections.remove(connection);
+        countAvailableSlots++;
     }
 }

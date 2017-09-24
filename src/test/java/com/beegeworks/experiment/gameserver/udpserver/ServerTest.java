@@ -13,7 +13,7 @@ public class ServerTest {
 
     @Before
     public void setup(){
-        server = new Server(9876);
+        server = new Server(9876, 1);
         server.start();
     }
 
